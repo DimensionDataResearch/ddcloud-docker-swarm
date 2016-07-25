@@ -1,0 +1,437 @@
+#!/usr/bin/env python2
+"""set up authentication and security for various components"""
+from __future__ import print_function
+import argparse
+import base64
+from collections import OrderedDict
+from contextlib import contextmanager
+import getpass
+import hashlib
+import os
+import posixpath
+import random
+import shlex
+import stat
+import string
+from subprocess import Popen, PIPE
+import sys
+import textwrap
+import uuid
+import yaml
+
+
+class HelpFormatter(argparse.RawTextHelpFormatter,
+                    argparse.ArgumentDefaultsHelpFormatter):
+    pass
+
+
+parser = argparse.ArgumentParser(
+    __file__,
+    __doc__,
+    formatter_class=HelpFormatter,
+    epilog=textwrap.dedent('''\
+    Examples:
+
+      {name}
+                            enable or re-enable all security options
+      {name} --enable=false
+                            disable all security options
+      {name} --iptables=false --consul-ssl=false
+                            disable iptables rules and Consul SSL
+    '''.format(name=__file__)))
+
+class ImplicitBool(object):
+    TRUE = True
+    FALSE = False
+    IMPLICIT_TRUE = 'True'  # this just has to be a different type/value than the real True
+
+    def __init__(self, value, explicit):
+        self.value = value
+        self.explicit = explicit
+
+    def __nonzero__(self):
+        return self.value
+
+    @classmethod
+    def represent(cls, dumper, obj):
+        return dumper.represent_bool(obj.value)
+
+    @classmethod
+    def parse_opt(cls, opt):
+        if len(opt) == 0:
+            raise argparse.ArgumentTypeError('blank is not allowed')
+
+        char = opt[0].lower()
+
+        if opt == cls.IMPLICIT_TRUE:
+            return cls(True, False)
+        elif char in ['1', 't']:
+            return cls(True, True)
+        elif char in ['0', 'f']:
+            return cls(False, True)
+        else:
+            raise argparse.ArgumentTypeError(
+                '"%s" is not allowed. Try "true" or "false"' % opt)
+
+# disables
+broad_opts = parser.add_argument_group(
+    "Broad Options",
+    "enable or disable security for entire components. This overrides any more "
+    "specific options set from the sections below.")
+broad_opts.add_argument(
+    '--enable',
+    type=ImplicitBool.parse_opt,
+    default=ImplicitBool.IMPLICIT_TRUE,
+    help='enable all security. This overrides everything.')
+broad_opts.add_argument(
+    '--consul',
+    type=ImplicitBool.parse_opt,
+    default=True,
+    help='Enable Consul security. This overrides all other Consul options.')
+broad_opts.add_argument(
+    '--iptables',
+    type=ImplicitBool.parse_opt,
+    default=True,
+    help=
+    'Use iptables rules. This overrides all other options related to iptables.')
+
+cert_opts = parser.add_argument_group(
+    "SSL Certificate Options",
+    "Options for generating the root CA")
+cert_opts.add_argument(
+    '--cert-country',
+    default='US',
+    help='certificate country')
+cert_opts.add_argument(
+    '--cert-state',
+    default='New York',
+    help='certificate state/province')
+cert_opts.add_argument(
+    '--cert-locality',
+    default='Anytown',
+    help='certificate locality/city')
+cert_opts.add_argument(
+    '--cert-organization',
+    default='Example Company Inc',
+    help='certificate organization')
+cert_opts.add_argument(
+    '--cert-unit',
+    default='Operations',
+    help='organizational unit inside of organization', )
+cert_opts.add_argument(
+    '--cert-email',
+    default='operations@example.com',
+    help='contact email for organizational unit')
+cert_opts.add_argument(
+    '--no-verify-certificates',
+    action='store_true',
+    help='skip verifying certificates as part of setup process')
+
+# Consul authentication
+consul_opts = parser.add_argument_group(
+    "Consul Options", "enable and disable auth components of Consul")
+consul_opts.add_argument(
+    '--consul-auth',
+    type=ImplicitBool.parse_opt,
+    default=True,
+    help='enable Consul auth',
+    dest='do_consul_auth')
+consul_opts.add_argument(
+    '--consul-ssl',
+    type=ImplicitBool.parse_opt,
+    default=True,
+    help='enable Consul auth',
+    dest='do_consul_ssl', )
+
+BASE = posixpath.abspath(posixpath.dirname(__file__)).replace("\\", "/")
+SECURITY_FILE = posixpath.join(BASE, 'security.yml')
+
+# SSL
+CERT_PATH = posixpath.join(BASE, 'ssl')
+ROOT_KEY = posixpath.join(CERT_PATH, 'private', 'cakey.pem')
+ROOT_CERT = posixpath.join(CERT_PATH, 'cacert.pem')
+
+# dumping
+yaml.SafeDumper.add_representer(
+    OrderedDict, lambda dumper, od: dumper.represent_dict(od.iteritems()))
+yaml.SafeDumper.add_representer(ImplicitBool, ImplicitBool.represent)
+
+PASSWORDS = {}  # KV is purpose: password
+
+
+class Component(object):
+    def __init__(self, args):
+        self.args = args
+
+    def check(self, subset):
+        """return tasks which need to be run"""
+        return []
+
+    def component_enabled(self, component):
+        if self.args.enable and self.args.enable.explicit:
+            return True
+        else:
+            return self.args.enable and component
+
+    def read_security(self):
+        try:
+            with open(SECURITY_FILE, 'r') as fh:
+                security = yaml.safe_load(fh)
+        except IOError:  # file doesn't exist
+            security = {}
+        except ValueError:  # bad YAML
+            print('bad YAML in `security.yml` - please fix and try again')
+            sys.exit(1)
+
+        return security or {}
+
+    def write_security(self, options):
+        try:
+            content = yaml.safe_dump(
+                OrderedDict(sorted(options.items())),
+                explicit_start=True)
+            with open(SECURITY_FILE, 'w') as out:
+                out.write(content)
+        except IOError:
+            print('could not write this YAML to {}:'.format(SECURITY_FILE))
+            print()
+            print(yaml.safe_dump(options, explicit_start=True))
+            sys.exit(1)
+
+    @contextmanager
+    def modify_security(self):
+        security = self.read_security()
+        yield security
+        security['security_enabled'] = True
+        self.write_security(security)
+
+    def random(self, size=2 ** 5 + 1):
+        """get `size` bytes of random data, base64 encoded"""
+        return base64.b64encode(os.urandom(size))
+
+    def randpass(self, size=16):
+        """generates a random string of digits + letters"""
+        chars = string.letters + string.digits
+        return ''.join((random.choice(chars)) for x in range(size))
+
+    def ask_pass(self, prompt='Password: ', purpose=None):
+        """\
+        Ask the user for a password. If `purpose` is supplied, the password will
+        be reused for other calls to the same purpose
+        """
+        confirmed = False
+        if purpose is not None and purpose in PASSWORDS:
+            password = PASSWORDS[purpose]
+        elif sys.stdin.isatty():
+            while not confirmed:
+                password = getpass.getpass(prompt)
+                confpass = getpass.getpass('Confirm: ')
+                if password == confpass:
+                    confirmed = True
+                else:
+                    print('Passwords dont match! Please retype password!')
+        else:
+            password = self.randpass()
+
+        if purpose is not None and purpose not in PASSWORDS:
+            PASSWORDS[purpose] = password
+
+        return password
+
+    def ask_string(self, prompt):
+        """
+        Ask the user for some string.
+        """
+        return raw_input(prompt)
+
+    def ask_boolean(self, prompt, default_value):
+        """
+        Ask the user for a boolean (Y/N)
+        """
+        result = raw_input(prompt).upper()
+        if result == 'Y':
+            return True
+        elif result == 'N':
+            return False
+        else:
+            return default_value
+
+    @contextmanager
+    def chdir(self, directory):
+        original = os.getcwd()
+        os.chdir(directory)
+        yield
+        os.chdir(original)
+
+    def call(self, command, stdin=None, visible_to_user=False, env=None):
+        capture = None if visible_to_user else PIPE
+        proc = Popen(shlex.split(command),
+                     stdin=capture,
+                     stdout=capture,
+                     stderr=capture,
+                     env=env)
+        stdout, stderr = proc.communicate(stdin)
+        return proc.returncode, stdout, stderr
+
+    def print_call_failure(self, status, stdout, stderr):
+        print('exit status: {}'.format(status))
+        if stdout:
+            print(' stdout '.center(40, '~'))
+            print(stdout.decode('utf-8'))
+        if stderr:
+            print(' stderr '.center(40, '~'))
+            print(stderr.decode('utf-8'))
+
+    def wrap_call(self, command, **kwargs):
+        status, out, err = self.call(command, **kwargs)
+        if status != 0:
+            print('~' * 40)
+            print('call to {} failed'.format(shlex.split(command)[0]))
+            print('command: {}'.format(command))
+            self.print_call_failure(status, out, err)
+            sys.exit(status)
+
+        return status, out, err
+
+    def openssl_subject(self, common, **overrides):
+        return '/C={country}/ST={state}/L={locality}/O={organization}' \
+               '/OU={unit}/CN={common}/emailAddress={email}'.format(
+            country=overrides.get('country', self.args.cert_country),
+            state=overrides.get('state', self.args.cert_state),
+            locality=overrides.get('locality', self.args.cert_locality),
+            organization=overrides.get('organization', self.args.cert_organization),
+            unit=overrides.get('unit', self.args.cert_unit),
+            common=common,
+            email=overrides.get('email', self.args.cert_email)
+        )
+
+    def toggle_boolean(self, inFlag, inValue, inDefault):
+        with self.modify_security() as config:
+            if inFlag not in config:
+                config[inFlag] = inDefault
+
+            if inValue is not None:
+                config[inFlag] = inValue
+
+
+class Certificates(Component):
+    def check(self):
+        return [self.ca]
+
+    def ca(self):
+        "certificate authority"
+        serial = posixpath.join(CERT_PATH, 'serial')
+        if posixpath.exists(serial):
+            print('serial already exists')
+        else:
+            with open(serial, 'w') as fh:
+                fh.write('100001')
+
+            print('created serial')
+
+        index = posixpath.join(CERT_PATH, 'index.txt')
+        if posixpath.exists(index):
+            print('index already exists')
+        else:
+            open(index, 'w').close()
+            print('created index')
+
+        with self.chdir(CERT_PATH):
+            if posixpath.exists(ROOT_KEY) or posixpath.exists(ROOT_CERT):
+                print('root CA already exists')
+            else:
+                self.wrap_call(
+                    'openssl req -new -x509 -extensions v3_ca -nodes -subj "{}" '
+                    '-keyout {} -out {} -days 365 -config ./openssl.cnf'.format(
+                        self.openssl_subject(
+                            "security-setup"), ROOT_KEY, ROOT_CERT))
+
+                os.chmod(ROOT_KEY, stat.S_IRUSR | stat.S_IWUSR)
+                os.chmod(ROOT_CERT, stat.S_IRUSR | stat.S_IWUSR)
+                print('generated root CA')
+
+
+class Consul(Component):
+    def check(self):
+        return [self.check_security, self.gossip_key, self.master_acl_token,
+		self.agent_acl_token, self.secure_acl_token]
+
+    def check_security(self):
+        "check security"
+        self.toggle_boolean('do_consul_auth',
+                            self.component_enabled(self.args.do_consul_auth),
+                            True)
+        self.toggle_boolean('do_consul_ssl',
+                            self.component_enabled(self.args.do_consul_ssl),
+                            True)
+
+    def gossip_key(self):
+        "gossip key"
+        with self.modify_security() as config:
+            if 'consul_gossip_key' not in config:
+                config['consul_gossip_key'] = self.random(16)
+                print('set gossip key')
+            else:
+                print('gossip key already set')
+
+    def master_acl_token(self):
+        "master acl token"
+        with self.modify_security() as config:
+            if 'consul_acl_master_token' not in config:
+                config['consul_acl_master_token'] = str(uuid.uuid4())
+                print('set acl master token')
+            else:
+                print('acl master token already set')
+
+    def agent_acl_token(self):
+        "agent acl token"
+        with self.modify_security() as config:
+            if 'consul_acl_agent_token' not in config:
+                config['consul_acl_agent_token'] = str(uuid.uuid4())
+                print('set acl agent token')
+            else:
+                print('acl agent token already set')
+
+    def secure_acl_token(self):
+        "secure acl token"
+        with self.modify_security() as config:
+            if 'consul_acl_secure_token' not in config:
+                config['consul_acl_secure_token'] = str(uuid.uuid4())
+                print('set acl secure token')
+            else:
+                print('acl secure token already set')
+
+
+class Vault(Component):
+    def check(self):
+        return [self.consul_acl_token]
+
+    def consul_acl_token(self):
+        "vault acl token"
+        with self.modify_security() as config:
+            if 'consul_acl_vault_token' not in config:
+                config['consul_acl_vault_token'] = str(uuid.uuid4())
+                print('set acl vault token')
+            else:
+                print('acl vault token already set')
+
+
+def main(args):
+    for cls in Component.__subclasses__():
+        component = cls(args)
+
+        print(' {} '.format(cls.__name__).center(40, '='))
+        for item in component.check():
+            print('----> {}'.format(item.__doc__))
+            item()
+
+    print('=' * 40)
+    print("""\
+Wrote security settings to {path}. Include them in your Ansible run like this:
+
+    ansible-playbook your-playbook.yml -e @{path}""".format(
+        path=SECURITY_FILE, ))
+
+
+if __name__ == '__main__':
+    main(parser.parse_args())

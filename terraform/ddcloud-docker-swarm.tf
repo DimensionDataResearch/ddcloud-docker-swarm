@@ -9,7 +9,7 @@ variable "cloudcontrol_dc"      { default = "AU9" }
 
 variable "swarm_address_prefix" { default = "10.50.1" }
 
-variable "master_count"         { default = 1 }
+variable "master_count"         { default = 2 }
 variable "master_disk_size_gb"  { default = 20 }
 variable "master_memory_gb"     { default = 8 }
 variable "master_cpu_count"     { default = 4 }
@@ -22,7 +22,7 @@ variable "worker_cpu_count"     { default = 4 }
 variable "worker_address_start" { default = 40 }
 
 variable "admin_password"       { default = "sn4us4ges!" }
-variable "auto_start"           { default = false }
+variable "auto_start"           { default = true }
 
 variable "count_format"         { default = "%02d" }
 
@@ -78,6 +78,11 @@ resource "ddcloud_server" "swarm_master" {
         name  = "role"
         value = "master"
     }
+
+    tag {
+        name  = "consul_dc"
+        value = "${lower(var.cloudcontrol_dc)}"
+    }
 }
 resource "ddcloud_nat" "swarm_master" {
     count                   = "${var.master_count}"
@@ -118,6 +123,11 @@ resource "ddcloud_server" "swarm_worker" {
     tag {
         name  = "role"
         value = "worker"
+    }
+
+    tag {
+        name  = "consul_dc"
+        value = "${lower(var.cloudcontrol_dc)}"
     }
 }
 resource "ddcloud_nat" "swarm_worker" {

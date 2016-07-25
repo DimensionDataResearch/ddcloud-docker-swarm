@@ -3,6 +3,8 @@ Docker Swarm on CloudControl
 
 This repository contains Terraform and Ansible scripts to deploy a Docker Swarm cluster on on Dimension Data CloudControl.
 
+Bits and pieces have been borrowed from the excellent `Mantl <https://github.com/CiscoCloud/Mantl>`_ project.
+
 This is a work-in-progress.
 
 Client Requirements
@@ -35,6 +37,7 @@ Then:
 * `ansible-playbook -u root ./playbooks/upgrade-packages.yml`
 * `ansible-playbook -u root ./playbooks/reboot-servers.yml` (if this command hangs, after 30 seconds just hit Ctrl-C, and proceed to the next step)
 * `ansible-playbook -u root ./playbooks/check-requirements.yml` (you should see no warnings or errors)
-* `ansible-playbook -u root ./ddcloud-docker-swarm.yml` (you should see no warnings or errors)
+* `./security-setup`
+* `ansible-playbook -u root -e @security.yml ./ddcloud-docker-swarm.yml` (you should see no warnings or errors)
 
 You're now ready to swarm.

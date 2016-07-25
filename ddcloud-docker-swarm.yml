@@ -2,5 +2,11 @@
 - include: "{{ playbook_dir }}/playbooks/check-requirements.yml"
 
 - hosts: all
+  vars:
+    traefik_domain: "tintoy-swarm.net"
+
   roles:
+    - common
+    - certificates
     - docker
+    - consul

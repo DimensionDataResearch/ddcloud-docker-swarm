@@ -16,3 +16,10 @@ ddcloud.inventory
 
 # Mac
 .DS_Store
+
+# Security configuration
+security.yml
+ssl/cacert.pem
+ssl/index.txt
+ssl/private/cakey.pem
+ssl/serial

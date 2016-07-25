@@ -83,7 +83,7 @@ def calculate_mantl_vars(func):
         name, attrs, groups = func(*args, **kwargs)
 
         # attrs
-        if attrs.get('role', '') == 'control':
+        if attrs.get('role', '') == 'master':
             attrs['consul_is_server'] = True
         else:
             attrs['consul_is_server'] = False
@@ -163,13 +163,14 @@ def ddcloud_server(resource, module_name):
 
         # generic
         'private_ipv4': raw_attrs['primary_adapter_ipv4'],
+        'public_ipv4': raw_attrs['public_ipv4'],
         'provider': 'ddcloud',
     }
 
     # attrs specific to Mantl
     attrs.update({
         'role': attrs['tags'].get('role', 'none'),
-        'consul_dc': attrs['tags'].get('role', 'dc1')
+        'consul_dc': attrs['tags'].get('consul_dc', 'dc1')
     })
 
     # groups specific to Mantl

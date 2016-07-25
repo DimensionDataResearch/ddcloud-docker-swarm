@@ -1,0 +1,10 @@
+- name: enable yum repos
+  sudo: yes
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/yum.repos.d/{{ item }}"
+  with_items:
+    - ciscocloud-rpm.repo
+    - asteris-mantl-rpm.repo
+  tags:
+    - bootstrap
