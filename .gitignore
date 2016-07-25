@@ -1,0 +1,18 @@
+# Compiled files
+*.tfstate
+*.tfstate.backup
+
+# Credentials
+credentials.tf
+
+# Cached modules
+.terraform/
+
+# Generated plans
+*.plan
+
+# Generated inventory
+ddcloud.inventory
+
+# Mac
+.DS_Store

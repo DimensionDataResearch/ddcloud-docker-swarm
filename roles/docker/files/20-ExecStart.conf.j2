@@ -1,0 +1,7 @@
+[Service]
+ExecStart=
+ExecStart=/usr/bin/docker daemon $OPTIONS \
+          $DOCKER_NETWORK_OPTIONS \
+          $ADD_REGISTRY \
+          $BLOCK_REGISTRY \
+          $INSECURE_REGISTRY
