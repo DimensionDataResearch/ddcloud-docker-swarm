@@ -1,5 +1,12 @@
 ---
 
+- name: get target role
+  set_fact:
+    is_master: "{{ inventory_hostname in masters_group }}"
+    is_worker: "{{ inventory_hostname in workers_group }}"
+  tags:
+    - docker-swarm
+
 - name: tag swarm seed node
   when: is_master
   set_fact:

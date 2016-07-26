@@ -23,6 +23,8 @@ consul_verify_outgoing: true
 consul_allow_stale: true
 consul_max_stale: 5s
 
+consul_listen_address: "0.0.0.0"
+consul_client_address: "0.0.0.0"
 consul_options:
-  - -listen=0.0.0.0
-  - -client=0.0.0.0
+  - "-bind={{consul_listen_address}}"
+  - "-client={{consul_client_address}}"

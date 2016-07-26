@@ -4,6 +4,8 @@
 - hosts: all
   vars:
     traefik_domain: "tintoy-swarm.net"
+    masters_group: role=master
+    workers_group: role=worker
 
   roles:
     - common
@@ -12,15 +14,11 @@
     - consul
     - docker-swarm
 
-- hosts: role=master
+# Configure Docker Swarm after everything else is in place. 
+- hosts: role=master|worker
   vars:
-    is_master: true
-  roles:
-    - docker-swarm
-
-- hosts: role=worker
-  vars:
-    is_worker: true
+    masters_group: role=master
+    workers_group: role=worker
   roles:
     - docker-swarm
 

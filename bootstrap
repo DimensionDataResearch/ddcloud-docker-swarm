@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# Apply initial Terraform configuration.
+echo "Step 1 of 7 - Creating infrastructure..."
+pushd ./terraform
+terraform apply
+if [ $? -ne 0 ]; then
+	echo "Failed to create infrastructure."
+
+	popd
+
+	exit 1
+fi
+popd
+echo "Step 1 of 7 complete; infrastructure created."
+
+# Refresh Terraform state so inventory script functions correctly (needed to resolve public IPs)
+echo "Step 2 of 7 - Refreshing Terraform state..."
+pushd ./terraform
+terraform refresh
+if [ $? -ne 0 ]; then
+	echo "Failed to refresh Terraform state."
+
+	popd
+
+	exit 1
+fi
+popd
+echo "Step 2 of 7 complete; Terraform state refreshed."
+
+echo "Step 3 of 7 - Configuring security..."
+./security-setup
+if [ $? -ne 0 ]; then
+	echo "Failed to configure security."
+
+	exit 1
+fi
+echo "Step 3 of 7 complete; security configured."
+
+# Use SSH key file.
+echo "Step 4 of 7 - Configuring cluster machines to use SSH keyfile (initial password can be found in terraform/ddcloud-docker-swarm.tf)..."
+ansible all -u root -k -m authorized_key -a "user=root key='{{ lookup('file', '$HOME/.ssh/id_rsa.pub') }}'"
+if [ $? -ne 0 ]; then
+	echo "Failed to configure SSH keys."
+
+	exit 1
+fi
+echo "Step 4 of 7 complete; SSH keys configured."
+
+# Set host names.
+echo "Step 5 of 7 - configuring cluster machine host names..."
+ansible all -u root -a "hostnamectl set-hostname {{ inventory_hostname }}"
+if [ $? -ne 0 ]; then
+	echo "Failed to configure cluster machine host names."
+
+	exit 1
+fi
+ansible-playbook -u root ./playbooks/reboot-servers.yml
+if [ $? -ne 0 ]; then
+	echo "Failed to reboot servers."
+
+	exit 1
+fi
+echo "Step 5 of 7 complete; host-names configured."
+
+# Upgrade all packages.
+echo "Step 6 of 7 - upgrading packages..."
+ansible-playbook -u root ./playbooks/upgrade-packages.yml
+if [ $? -ne 0 ]; then
+	echo "Failed to upgrade packages."
+
+	exit 1
+fi
+ansible-playbook -u root ./playbooks/reboot-servers.yml
+if [ $? -ne 0 ]; then
+	echo "Failed to reboot servers."
+
+	exit 1
+fi
+
+echo "Step 6 of 7 complete; packages upgraded."
+
+# Upgrade all packages.
+echo "Step 7 of 7 - installing components..."
+ansible-playbook -u root -e @security.yml ./ddcloud-docker-swarm.yml
+if [ $? -ne 0 ]; then
+	echo "Failed to upgrade packages."
+
+	exit 1
+fi
+ansible-playbook -u root ./playbooks/reboot-servers.yml
+if [ $? -ne 0 ]; then
+	echo "Failed to install components."
+
+	exit 1
+fi
+
+echo "Step 7 of 7 complete; components installed."
+
+exit 0

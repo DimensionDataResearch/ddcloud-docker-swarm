@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+pushd ./terraform
+
+terraform destroy -target=ddcloud_server.swarm_master -target=ddcloud_server.swarm_worker
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+	echo "Failed to destroy cluster nodes."
+fi
+
+popd
+
+exit $RESULT

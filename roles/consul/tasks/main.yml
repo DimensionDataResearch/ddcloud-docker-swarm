@@ -12,26 +12,36 @@
     - consul
     - bootstrap
 
+- name: reconfigure consul service
+  sudo: yes
+  template:
+    src:  "consul.service.j2"
+    dest: "/etc/systemd/system/consul.service"
+  notify:
+    - reload systemd
+    - reload consul
+  tags:
+    - consul
+    - bootstrap
+
+- name: reconfigure consul service environment
+  sudo: yes
+  template:
+    src:  "sysconfig-consul.j2"
+    dest: "/etc/sysconfig/consul"
+  notify:
+    - reload systemd
+    - reload consul
+  tags:
+    - consul
+    - bootstrap
+
 - name: create directory for systemd drop-ins
   sudo: yes
   file:
     path: /etc/systemd/system/consul.service.d
     state: directory
     mode: 0755
-  tags:
-    - consul
-    - bootstrap
-
-- name: systemd drop-in for options
-  sudo: yes
-  copy:
-    src:  "{{ item }}"
-    dest: "/etc/systemd/system/consul.service.d/{{ item }}"
-  with_items:
-    - 10-options.conf
-  notify:
-    - reload systemd
-    - reload consul
   tags:
     - consul
     - bootstrap

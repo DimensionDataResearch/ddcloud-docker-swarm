@@ -1,0 +1,21 @@
+[Unit]
+Description=Consul is a tool for service discovery and configuration.
+Documentation=https://consul.io
+After=network-online.target
+Wants=network-online.target
+After=rsyslog.service
+Wants=rsyslog.service
+
+[Service]
+User=consul
+Group=consul
+EnvironmentFile=/etc/sysconfig/consul
+ExecStart=/usr/bin/consul agent -config-dir=${CONFIG_DIR} -data-dir=${DATA_DIR} -bind={{ consul_listen_address }} -client={{ consul_client_address }} ${EXTRA_OPTS}
+ExecReload=-/bin/kill -HUP $MAINPID
+KillSignal=SIGINT
+LimitNOFILE=65536
+Restart=on-success
+IgnoreSIGPIPE=yes
+
+[Install]
+WantedBy=multi-user.target
