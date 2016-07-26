@@ -10,3 +10,18 @@
     - certificates
     - docker
     - consul
+    - docker-swarm
+
+- hosts: role=master
+  vars:
+    is_master: true
+  roles:
+    - docker-swarm
+
+- hosts: role=worker
+  vars:
+    is_worker: true
+  roles:
+    - docker-swarm
+
+  

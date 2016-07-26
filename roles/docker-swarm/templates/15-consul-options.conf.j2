@@ -1,0 +1,3 @@
+# /etc/systemd/systemd/docker.service.d/10-options.conf
+[Service]
+Environment='DOCKER_CONSUL_OPTIONS={{ docker_consul_options | join (" ") }}'

@@ -1,0 +1,54 @@
+---
+
+- name: tag swarm seed node
+  when: is_master
+  set_fact:
+    is_swarm_seed_node: "{{ inventory_hostname == swarm_seed_node }}" 
+  tags:
+    - docker-swarm
+
+# Connect to the seed node and check for current swarm members.
+- name: check swarm membership (step 1 of 3)
+  when: is_swarm_seed_node
+  shell: "docker node ls | tail -n +2 | sed 's/\\*//g' | tr -s ' ' | cut -d ' ' -f 2"
+  ignore_errors: yes
+  register: current_swarm_membership
+  failed_when: current_swarm_membership.rc > 1
+  tags:
+    - docker-swarm
+
+# For each node, copy the test output to current_swarm_members.
+- name: check swarm membership (step 2 of 3)
+  set_fact:
+    current_swarm_members: "{{ hostvars.get(swarm_seed_node, {}).get('current_swarm_membership', {}).get('stdout_lines', []) }}"
+  tags:
+    - docker-swarm
+
+# For each node, check if that node appears in the swarm membership list.
+- name: check swarm membership (step 3 of 3)
+  set_fact:
+    is_swarm_member: "{{ inventory_hostname in current_swarm_members }}"
+  tags:
+    - docker-swarm
+
+- name: initialise swarm
+  command: "docker swarm init --secret {{ swarm_secret }}"
+  sudo: yes
+  when: "is_swarm_seed_node and not is_swarm_member"
+  tags:
+    - docker-swarm
+
+# AF: Still need to work out how to auto-accept pending manager nodes.
+- name: join swarm as manager
+  command: "docker swarm join --manager --secret {{ swarm_secret }} {{ swarm_seed_node }}"
+  sudo: yes
+  when: "is_master and not is_swarm_member and not is_swarm_seed_node"
+  tags:
+    - docker-swarm
+
+- name: join swarm as worker
+  sudo: yes
+  command: "docker swarm join --secret {{ swarm_secret }} {{ swarm_seed_node }}"
+  when: "is_worker and not is_swarm_member"
+  tags:
+    - docker-swarm

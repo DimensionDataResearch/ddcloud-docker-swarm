@@ -1,4 +1,0 @@
----
-- name: restart nginx-consul
-  sudo: yes
-  command: systemctl restart nginx-consul

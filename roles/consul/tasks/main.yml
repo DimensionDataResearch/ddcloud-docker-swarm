@@ -102,16 +102,11 @@
   tags:
     - consul
 
-- name: create secure acl
-  sudo: yes
-  run_once: yes
-  command: consul-cli acl-update --token={{ consul_acl_master_token }} --name="Mantl Secure Token" --rule='key:secure:write' --rule='service::write' {{ consul_acl_secure_token }}
+- name: update resolv.conf to use consul for DNS
+  copy:
+    sudo: yes
+  copy:
+    src:  "resolv.conf"
+    dest: "/etc/resolv.conf"
   tags:
     - consul
-
-- include: acl.yml
-
-- meta: flush_handlers
-  tags:
-    - consul
-
