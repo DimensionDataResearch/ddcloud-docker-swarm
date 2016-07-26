@@ -10,16 +10,11 @@
   roles:
     - common
     - certificates
+    - dnsmasq
     - docker
     - consul
-    - docker-swarm
 
 # Configure Docker Swarm after everything else is in place. 
-- hosts: role=master|worker
-  vars:
-    masters_group: role=master
-    workers_group: role=worker
+- hosts: all
   roles:
     - docker-swarm
-
-  

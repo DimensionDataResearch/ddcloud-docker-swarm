@@ -4,7 +4,3 @@
 
 swarm_seed_node: swarm-master-01
 swarm_secret: sn4us4ges
-
-is_swarm_seed_node: false
-is_master: false
-is_worker: false

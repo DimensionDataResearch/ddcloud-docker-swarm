@@ -27,17 +27,6 @@ You'll want to customise `<terraform/ddcloud-docker-swarm.tf>`_ and `<ddcloud-do
 
 Then:
 
-* `pushd ./terraform`
-	* `terraform apply`
-	* `terraform refresh` (required by inventory plugin to pick up public IP addresses for cluster machines)
-* `popd`
-* `./enable-ssh` (configure the cluster machines to trust your SSH key)
-* `ansible all -u root -m ping' (you should see a response from each machine in the cluster, once they have rebooted)
-* `ansible all -u root -m ping' (you should see a response from each machine in the cluster, once they have rebooted)
-* `ansible-playbook -u root ./playbooks/upgrade-packages.yml`
-* `ansible-playbook -u root ./playbooks/reboot-servers.yml` (if this command hangs, after 30 seconds just hit Ctrl-C, and proceed to the next step)
-* `ansible-playbook -u root ./playbooks/check-requirements.yml` (you should see no warnings or errors)
-* `./security-setup`
-* `ansible-playbook -u root -e @security.yml ./ddcloud-docker-swarm.yml` (you should see no warnings or errors)
+``./create-cluster``
 
-You're now ready to swarm.
+Once the process completes (the "upgrade packages" step can take quite a while), you're now ready to swarm.

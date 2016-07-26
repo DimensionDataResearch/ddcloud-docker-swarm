@@ -7,6 +7,9 @@
     dest: /etc/localtime
     state: link
     force: yes
+  tags:
+    - bootstrap
+    - common
 
 # add hosts to /etc/hosts
 - name: configure hosts file
@@ -16,6 +19,7 @@
     dest: /etc/hosts
     mode: 0644
   tags:
+    - bootstrap
     - common
 
 - name: set persistent hostname
@@ -28,7 +32,7 @@
     group: root
     mode: 0644
   tags:
-    - common
+    - bootstrap
 
 # add yum-utils if not already installed
 - name: add yum-config-manager
@@ -37,6 +41,7 @@
     name: yum-utils
   tags:
     - bootstrap
+    - common
 
 - name: increase timeouts in YUM
   sudo: yes
@@ -54,6 +59,7 @@
     state: latest
   tags:
     - bootstrap
+    - common
 
 - name: install system utilities
   sudo: yes
@@ -72,9 +78,11 @@
     - chrony
     - smlr
     - telnet
+    - bind-utils
     - vim
   tags:
     - bootstrap
+    - common
 
 - name: enable chronyd
   sudo: yes

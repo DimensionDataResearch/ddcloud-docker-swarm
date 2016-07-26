@@ -344,7 +344,7 @@ class Certificates(Component):
                     'openssl req -new -x509 -extensions v3_ca -nodes -subj "{}" '
                     '-keyout {} -out {} -days 365 -config ./openssl.cnf'.format(
                         self.openssl_subject(
-                            "security-setup"), ROOT_KEY, ROOT_CERT))
+                            "docker-swarm"), ROOT_KEY, ROOT_CERT))
 
                 os.chmod(ROOT_KEY, stat.S_IRUSR | stat.S_IWUSR)
                 os.chmod(ROOT_CERT, stat.S_IRUSR | stat.S_IWUSR)

@@ -38,8 +38,6 @@
   tags:
     - docker
 
-# We have to restart docker when these files have changed, otherwise the updated
-# configuration won't come into effect.
 - name: systemd drop-in for options
   sudo: yes
   template:
@@ -63,14 +61,15 @@
   tags:
     - docker
 
+# Must install packages in reverse order due to specific dependency version
 - name: install docker packages
   sudo: yes
   yum:
     name: "{{ item }}"
     state: present
   with_items:
-    - "docker-engine"
-    - "docker-engine-selinux"
+    - "docker-engine-selinux-0:{{docker_version}}.el7.centos.noarch"
+    - "docker-engine-0:{{docker_version}}.el7.centos.x86_64"
   tags:
     - docker
 

@@ -7,4 +7,5 @@
     - ciscocloud-rpm.repo
     - asteris-mantl-rpm.repo
   tags:
+    - repos
     - bootstrap

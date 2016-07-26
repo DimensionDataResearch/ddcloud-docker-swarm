@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if ["$DEBUG" -ne ""]; then
+	VERBOSE_FLAGS="-vv"
+fi
+
 # Apply initial Terraform configuration.
 echo "Step 1 of 7 - Creating infrastructure..."
 pushd ./terraform
@@ -39,7 +43,7 @@ echo "Step 3 of 7 complete; security configured."
 
 # Use SSH key file.
 echo "Step 4 of 7 - Configuring cluster machines to use SSH keyfile (initial password can be found in terraform/ddcloud-docker-swarm.tf)..."
-ansible all -u root -k -m authorized_key -a "user=root key='{{ lookup('file', '$HOME/.ssh/id_rsa.pub') }}'"
+ansible all -k -m authorized_key -a "user=root key='{{ lookup('file', '$HOME/.ssh/id_rsa.pub') }}'" $VERBOSE_FLAGS
 if [ $? -ne 0 ]; then
 	echo "Failed to configure SSH keys."
 
@@ -49,13 +53,13 @@ echo "Step 4 of 7 complete; SSH keys configured."
 
 # Set host names.
 echo "Step 5 of 7 - configuring cluster machine host names..."
-ansible all -u root -a "hostnamectl set-hostname {{ inventory_hostname }}"
+ansible all -a "hostnamectl set-hostname {{ inventory_hostname }}" $VERBOSE_FLAGS
 if [ $? -ne 0 ]; then
 	echo "Failed to configure cluster machine host names."
 
 	exit 1
 fi
-ansible-playbook -u root ./playbooks/reboot-servers.yml
+ansible-playbook ./playbooks/reboot-servers.yml $VERBOSE_FLAGS
 if [ $? -ne 0 ]; then
 	echo "Failed to reboot servers."
 
@@ -65,13 +69,13 @@ echo "Step 5 of 7 complete; host-names configured."
 
 # Upgrade all packages.
 echo "Step 6 of 7 - upgrading packages..."
-ansible-playbook -u root ./playbooks/upgrade-packages.yml
+ansible-playbook ./playbooks/upgrade-packages.yml $VERBOSE_FLAGS
 if [ $? -ne 0 ]; then
 	echo "Failed to upgrade packages."
 
 	exit 1
 fi
-ansible-playbook -u root ./playbooks/reboot-servers.yml
+ansible-playbook ./playbooks/reboot-servers.yml $VERBOSE_FLAGS
 if [ $? -ne 0 ]; then
 	echo "Failed to reboot servers."
 
@@ -82,13 +86,13 @@ echo "Step 6 of 7 complete; packages upgraded."
 
 # Upgrade all packages.
 echo "Step 7 of 7 - installing components..."
-ansible-playbook -u root -e @security.yml ./ddcloud-docker-swarm.yml
+ansible-playbook -e @security.yml ./ddcloud-docker-swarm.yml $VERBOSE_FLAGS
 if [ $? -ne 0 ]; then
 	echo "Failed to upgrade packages."
 
 	exit 1
 fi
-ansible-playbook -u root ./playbooks/reboot-servers.yml
+ansible-playbook ./playbooks/reboot-servers.yml $VERBOSE_FLAGS
 if [ $? -ne 0 ]; then
 	echo "Failed to install components."
 

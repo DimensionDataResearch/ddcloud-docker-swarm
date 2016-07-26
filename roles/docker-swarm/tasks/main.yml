@@ -1,16 +1,16 @@
 ---
 
-- name: get target role
+- name: tag swarm seed node
   set_fact:
-    is_master: "{{ inventory_hostname in masters_group }}"
-    is_worker: "{{ inventory_hostname in workers_group }}"
+    is_swarm_seed_node: "{{ inventory_hostname == swarm_seed_node }}"
+    is_not_swarm_seed_node: "{{ inventory_hostname != swarm_seed_node }}" 
   tags:
     - docker-swarm
 
-- name: tag swarm seed node
-  when: is_master
+- name: capture node role
   set_fact:
-    is_swarm_seed_node: "{{ inventory_hostname == swarm_seed_node }}" 
+    is_master: "{{ role == 'master' }}"
+    is_worker: "{{ role == 'worker' }}"
   tags:
     - docker-swarm
 
@@ -35,13 +35,14 @@
 - name: check swarm membership (step 3 of 3)
   set_fact:
     is_swarm_member: "{{ inventory_hostname in current_swarm_members }}"
+    is_not_swarm_member: "{{ inventory_hostname not in current_swarm_members }}"
   tags:
     - docker-swarm
 
 - name: initialise swarm
   command: "docker swarm init --secret {{ swarm_secret }}"
   sudo: yes
-  when: "is_swarm_seed_node and not is_swarm_member"
+  when: "(is_swarm_seed_node|bool) and (is_not_swarm_member|bool)"
   tags:
     - docker-swarm
 
@@ -49,13 +50,13 @@
 - name: join swarm as manager
   command: "docker swarm join --manager --secret {{ swarm_secret }} {{ swarm_seed_node }}"
   sudo: yes
-  when: "is_master and not is_swarm_member and not is_swarm_seed_node"
+  when: "(is_master|bool) and (is_not_swarm_member|bool) and (is_not_swarm_seed_node|bool)"
   tags:
     - docker-swarm
 
 - name: join swarm as worker
   sudo: yes
   command: "docker swarm join --secret {{ swarm_secret }} {{ swarm_seed_node }}"
-  when: "is_worker and not is_swarm_member"
+  when: "(is_worker|bool) and (is_not_swarm_member|bool)"
   tags:
     - docker-swarm

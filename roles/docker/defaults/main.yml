@@ -1,5 +1,8 @@
 ---
 
+# Fixed at RC4 for now; RC5 is broken due to missing docker.sock.
+docker_version: 1.12.0-0.4.rc4
+
 docker_tcp: true
 
 docker_options: ""

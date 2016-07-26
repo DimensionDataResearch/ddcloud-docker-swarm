@@ -112,11 +112,11 @@
   tags:
     - consul
 
-- name: update resolv.conf to use consul for DNS
+- name: add consul drop-in for dnsmasq
   copy:
     sudo: yes
   copy:
-    src:  "resolv.conf"
-    dest: "/etc/resolv.conf"
+    src:  "10-dnsmasq-consul.conf"
+    dest: "/etc/dnsmasq.d/10-consul.conf"
   tags:
     - consul

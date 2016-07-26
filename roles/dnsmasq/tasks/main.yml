@@ -1,0 +1,28 @@
+---
+
+- name: install dnsmasq
+  sudo: yes
+  yum:
+    name: "dnsmasq"
+    state: present
+  tags:
+    - dnsmasq
+
+- name: update configuration for dnsmasq
+  sudo: yes
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/{{ item }}"
+  with_items:
+    - dnsmasq.conf
+    - resolv.dnsmasq.conf
+    - resolv.conf
+  tags:
+    - dnsmasq
+
+- name: start dnsmasq
+  sudo: yes
+  service: name=dnsmasq
+           state=restarted
+  tags:
+    - dnsmasq
