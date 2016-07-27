@@ -46,11 +46,16 @@
   tags:
     - docker-swarm
 
-# AF: Still need to work out how to auto-accept pending manager nodes.
 - name: join swarm as manager
   command: "docker swarm join --manager --secret {{ swarm_secret }} {{ swarm_seed_node }}"
   sudo: yes
   when: "(is_master|bool) and (is_not_swarm_member|bool) and (is_not_swarm_seed_node|bool)"
+  tags:
+    - docker-swarm
+
+- name: accept pending manager nodes
+  shell: "docker node ls | grep ' Pending ' | tr -s ' ' | cut -d ' ' -f 1 | xargs docker node accept"
+  when: is_swarm_seed_node
   tags:
     - docker-swarm
 
