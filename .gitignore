@@ -19,6 +19,8 @@ ddcloud.inventory
 
 # Security configuration
 security.yml
+security.vault.yml
+security.vault.password.txt
 ssl/cacert.pem
 ssl/index.txt
 ssl/private/cakey.pem

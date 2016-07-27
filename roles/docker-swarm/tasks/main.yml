@@ -50,6 +50,9 @@
   command: "docker swarm join --manager --secret {{ swarm_secret }} {{ swarm_seed_node }}"
   sudo: yes
   when: "(is_master|bool) and (is_not_swarm_member|bool) and (is_not_swarm_seed_node|bool)"
+  ignore_errors: yes
+  register: swarm_join_manager
+  failed_when: swarm_join_manager.rc > 1
   tags:
     - docker-swarm
 
