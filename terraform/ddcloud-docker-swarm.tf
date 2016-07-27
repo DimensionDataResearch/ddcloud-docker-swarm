@@ -9,6 +9,10 @@ variable "cloudcontrol_dc"      { default = "AU9" }
 
 variable "swarm_address_prefix" { default = "10.50.1" }
 
+variable "domain_name"          { default = "tintoy.io" }
+variable "subdomain_name"       { default = "au9.swarm" }
+variable "aws_hosted_zone_id"   { default = "ZOBD4EJVNNOC4" }
+
 variable "master_count"         { default = 2 }
 variable "master_disk_size_gb"  { default = 20 }
 variable "master_memory_gb"     { default = 8 }
@@ -28,6 +32,9 @@ variable "count_format"         { default = "%02d" }
 
 provider "ddcloud" {
     region                 = "${var.cloudcontrol_region}"
+}
+provider "aws" {
+    region = "us-west-1"
 }
 
 resource "ddcloud_networkdomain" "swarm_domain" {
@@ -92,6 +99,15 @@ resource "ddcloud_nat" "swarm_master" {
 
     depends_on              = ["ddcloud_vlan.swarm_vlan_01"]
 }
+resource "aws_route53_record" "dns-swarm-master-node" {
+    count                   = "${var.master_count}"
+    type                    = "A"
+    ttl                     = 60
+    zone_id                 = "${var.aws_hosted_zone_id}"
+
+    name                    = "${element(ddcloud_server.swarm_master.*.name, count.index)}.node.${var.subdomain_name}.${var.domain_name}"
+    records                 = ["${element(ddcloud_nat.swarm_master.*.public_ipv4, count.index)}"]
+}
 
 # Workers.
 resource "ddcloud_server" "swarm_worker" {
@@ -137,4 +153,26 @@ resource "ddcloud_nat" "swarm_worker" {
     private_ipv4            = "${element(ddcloud_server.swarm_worker.*.primary_adapter_ipv4, count.index)}"
 
     depends_on              = ["ddcloud_vlan.swarm_vlan_01"]
+}
+resource "aws_route53_record" "dns-swarm-worker-node" {
+    count                   = "${var.worker_count}"
+    type                    = "A"
+    ttl                     = 60
+    zone_id                 = "${var.aws_hosted_zone_id}"
+
+    name                    = "${element(ddcloud_server.swarm_worker.*.name, count.index)}.node.${var.subdomain_name}.${var.domain_name}"
+    records                 = ["${element(ddcloud_nat.swarm_worker.*.public_ipv4, count.index)}"]
+}
+
+# Wildcard group.
+resource "aws_route53_record" "dns-group-wildcard" {
+    type    = "A"
+    ttl     = 60
+    zone_id = "${var.aws_hosted_zone_id}"
+
+    name    = "*.${var.subdomain_name}.${var.domain_name}"
+    records = [
+        "${ddcloud_nat.swarm_master.*.public_ipv4}",
+        "${ddcloud_nat.swarm_worker.*.public_ipv4}"
+    ]
 }

@@ -109,17 +109,10 @@ echo "Step 6 of 7 complete; packages upgraded."
 echo "Step 7 of 7 - installing components..."
 ansible-playbook -e @security.yml ./ddcloud-docker-swarm.yml $VERBOSE_FLAGS
 if [ $? -ne 0 ]; then
-	echo "Failed to upgrade packages."
+	echo "Failed to install components packages."
 
 	exit 1
 fi
-ansible-playbook ./playbooks/reboot-servers.yml $VERBOSE_FLAGS
-if [ $? -ne 0 ]; then
-	echo "Failed to install components."
-
-	exit 1
-fi
-
 echo "Step 7 of 7 complete; components installed."
 
 exit 0
