@@ -16,7 +16,14 @@
   with_items:
     - dnsmasq.conf
     - resolv.dnsmasq.conf
-    - resolv.conf
+  tags:
+    - dnsmasq
+
+- name: update resolv.conf
+  sudo: yes
+  template:
+    src: "resolv.conf.j2"
+    dest: "/etc/resolv.conf"
   tags:
     - dnsmasq
 
