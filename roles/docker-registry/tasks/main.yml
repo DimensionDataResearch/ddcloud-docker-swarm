@@ -30,18 +30,17 @@
   tags:
     - docker-registry
 
-- name: create docker-compose file
+- name: create registry startup script
   sudo: true
   template:
-    src: "docker-compose.yml.j2"
-    dest: "{{registry_data_directory}}/docker-compose.yml"
+    src: "start-registry.sh.j2"
+    dest: "{{registry_data_directory}}/start-registry.sh"
+    mode: "u=rwx,g=rx"
   tags:
     - docker-registry
 
 - name: start or update registry
   sudo: true
-  shell: "/usr/local/bin/docker-compose up -d"
-  args:
-    chdir: "{{registry_data_directory}}"
+  shell: "{{registry_data_directory}}/start-registry.sh"
   tags:
     - docker-registry

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+docker service create \
+	--name registry \
+	-p 5050:5000 \
+	-e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/cert \
+	-e REGISTRY_HTTP_TLS_KEY=/certs/key \
+	-e REGISTRY_HTTP_SECRET=helloworld \
+	-e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
+	-e REGISTRY_AUTH_HTPASSWD_REALM="Registry Realm" \
+	-e REGISTRY_HTTP_HOST=https://swarm-master-01:5000 \
+	-m type=volume,source={{registry_data_directory}}/data,target=/var/lib/registry \
+	-m type=volume,source={{registry_data_directory}}/auth,target=/auth \
+	-m type=volume,source={{registry_certs_directory}},target=/certs \
+	-l constraint:node==swarm-master-01 \
+	registry:2

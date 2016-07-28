@@ -4,3 +4,7 @@
 
 swarm_seed_node: swarm-master-01
 swarm_secret: sn4us4ges
+
+docker_consul_options:
+    - "--cluster-store='consul://{{inventory_host_name}}.node.consul:8500'"
+    - "--cluster-advertise='{{inventory_host_name}}.node.consul'"
