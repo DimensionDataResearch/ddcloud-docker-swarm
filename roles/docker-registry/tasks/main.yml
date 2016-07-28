@@ -1,0 +1,47 @@
+---
+
+- name: create data folder for docker registry
+  sudo: true
+  file:
+    path: "{{registry_data_directory}}/data"
+    state: directory
+    # owner: docker
+    # group: docker
+    # mode: "u=rwx,g=rwx,o="
+  tags:
+      - docker-registry
+
+- name: create auth folder for docker registry
+  sudo: true
+  file:
+    path: "{{registry_data_directory}}/auth"
+    state: directory
+    # owner: docker
+    # group: docker
+    # mode: "u=rwx,g=rwx,o="
+  tags:
+      - docker-registry
+
+- name: create htpasswd for docker registry
+  sudo: true
+  shell: "htpasswd -nbB '{{registry_user}}' '{{registry_password}}' > '{{registry_data_directory}}/auth/htpasswd'"
+  args:
+    creates: "{{registry_data_directory}}/auth/htpasswd"
+  tags:
+    - docker-registry
+
+- name: create docker-compose file
+  sudo: true
+  template:
+    src: "docker-compose.yml.j2"
+    dest: "{{registry_data_directory}}/docker-compose.yml"
+  tags:
+    - docker-registry
+
+- name: start or update registry
+  sudo: true
+  shell: "/usr/local/bin/docker-compose up -d"
+  args:
+    chdir: "{{registry_data_directory}}"
+  tags:
+    - docker-registry

@@ -12,9 +12,16 @@
     - docker
     - consul
 
-# Configure Docker Swarm after everything else is in place. 
+# Configure Docker Swarm and Docker Registry after everything else is in place. 
 - hosts: all
   vars:
     traefik_domain: "au9.swarm.tintoy.io"
   roles:
     - docker-swarm
+
+# Configure Docker Swarm and Docker Registry after everything else is in place. 
+- hosts: swarm-master-01
+  vars:
+    traefik_domain: "au9.swarm.tintoy.io"
+  roles:
+    - docker-registry

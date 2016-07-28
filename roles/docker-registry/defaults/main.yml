@@ -1,0 +1,11 @@
+---
+
+registry_port: "5050"
+
+registry_authentication: true
+registry_user: "swarm"
+registry_password: "wellohorld"
+registry_http_secret: "helloworld"
+
+registry_data_directory: "/var/lib/docker-registry"
+registry_certs_directory: "/etc/pki/swarm"

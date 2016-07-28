@@ -1,0 +1,22 @@
+version: "2"
+
+services:
+    registry:
+        restart: always
+        image: registry:2
+
+        ports:
+            - "{{registry_port}}:5000"
+
+        environment:
+            REGISTRY_HTTP_TLS_CERTIFICATE: /certs/cert
+            REGISTRY_HTTP_TLS_KEY: /certs/key
+            {% if registry_authentication %}REGISTRY_AUTH: htpasswd
+            REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+            REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+            REGISTRY_HTTP_SECRET: "{{registry_http_secret}}"{% endif %}
+
+        volumes:
+            - "{{registry_data_directory}}/data:/var/lib/registry"
+            - "{{registry_data_directory}}/auth:/auth"
+            - "{{registry_certs_directory}}:/certs"
