@@ -7,6 +7,8 @@
 variable "cloudcontrol_region"  { default = "AU" }
 variable "cloudcontrol_dc"      { default = "AU9" }
 
+variable "osimage_name"         { default = "CentOS 7 64-bit 2 CPU" }
+
 variable "swarm_address_prefix" { default = "10.50.1" }
 
 variable "domain_name"          { default = "tintoy.io" }
@@ -16,13 +18,13 @@ variable "aws_hosted_zone_id"   { default = "ZOBD4EJVNNOC4" }
 variable "master_count"         { default = 2 }
 variable "master_disk_size_gb"  { default = 20 }
 variable "master_memory_gb"     { default = 8 }
-variable "master_cpu_count"     { default = 4 }
+variable "master_cpu_count"     { default = 2 }
 variable "master_address_start" { default = 20 }
 
 variable "worker_count"         { default = 3 }
 variable "worker_disk_size_gb"  { default = 20 }
 variable "worker_memory_gb"     { default = 8 }
-variable "worker_cpu_count"     { default = 4 }
+variable "worker_cpu_count"     { default = 2 }
 variable "worker_address_start" { default = 40 }
 
 variable "admin_password"       { default = "sn4us4ges!" }
@@ -67,9 +69,9 @@ resource "ddcloud_server" "swarm_master" {
 
     # OS disk (/dev/sda) - expand to ${var.master_disk_size_gb}.
     disk {
-        scsi_unit_id      = 0
-        size_gb           = "${var.master_disk_size_gb}"
-        speed             = "STANDARD"
+        scsi_unit_id        = 0
+        size_gb             = "${var.master_disk_size_gb}"
+        speed               = "STANDARD"
     }
 
     networkdomain           = "${ddcloud_networkdomain.swarm_domain.id}"
@@ -79,7 +81,7 @@ resource "ddcloud_server" "swarm_master" {
     dns_primary             = "8.8.8.8"
     dns_secondary           = "8.8.4.4"
 
-    osimage_name            = "CentOS 7 64-bit 2 CPU"
+    osimage_name            = "${var.osimage_name}"
 
     tag {
         name  = "role"
@@ -134,7 +136,7 @@ resource "ddcloud_server" "swarm_worker" {
     dns_primary             = "8.8.8.8"
     dns_secondary           = "8.8.4.4"
 
-    osimage_name            = "CentOS 7 64-bit 2 CPU"
+    osimage_name            = "${var.osimage_name}"
 
     tag {
         name  = "role"

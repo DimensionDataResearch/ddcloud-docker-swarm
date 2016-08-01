@@ -28,6 +28,9 @@ fi
 popd
 echo "Step 2 of 7 complete; Terraform state refreshed."
 
+# Required by inventory plugin
+export TERRAFORM_STATE_ROOT=$PWD
+
 echo "Step 3 of 7 - Configuring security..."
 ./security-setup
 if [ $? -ne 0 ]; then
@@ -69,6 +72,15 @@ PATH=$OLDPATH
 
 echo "Removing temporary credentials..."
 rm -f $VAULT_FILE $VAULT_PASSWORD_FILE
+
+echo "Removing password for root..."
+ansible all -a 'passwd -d root'
+if [ $? -ne 0 ]; then
+	echo "Failed to remove password for root."
+
+	exit 1
+fi
+echo "Removed password for root..."
 
 echo "Step 4 of 7 complete; SSH keys configured."
 
