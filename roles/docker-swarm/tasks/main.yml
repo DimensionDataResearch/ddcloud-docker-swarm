@@ -57,7 +57,7 @@
     - docker-swarm
 
 - name: accept pending manager nodes
-  shell: "docker node ls | grep ' Pending ' | tr -s ' ' | cut -d ' ' -f 1 | xargs docker node accept"
+  shell: "for node in $(docker node ls | grep ' Pending ' | tr -s ' ' | cut -d ' ' -f 1); do docker node accept $node; done"
   when: is_swarm_seed_node
   tags:
     - docker-swarm
