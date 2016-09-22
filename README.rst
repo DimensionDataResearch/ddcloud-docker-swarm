@@ -30,3 +30,8 @@ Then:
 ``./create-cluster``
 
 Once the process completes (the "upgrade packages" step can take quite a while), you're now ready to swarm.
+
+Known issues
+------------
+
+Usage of ``sshpass`` is ugly; we have since worked out `how to deploy SSH keys to DD CloudControl <https://github.com/DimensionDataResearch/glider-gun/blob/master/docker-images/glider-gun-template-multi-cloud/root/ddcloud/web/ssh.tf>`_ (and will back-port this functionality at some point).
