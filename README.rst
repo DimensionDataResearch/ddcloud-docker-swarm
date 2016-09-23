@@ -18,6 +18,7 @@ Client Requirements
 * An AWS hosted DNS zone.
 * AWS credentials that can manage entries in that zone.
 * CloudControl credentials.
+* `sshpass <https://gist.github.com/arunoda/7790979>`_ if you want to deploy everything with a single command (sorry, see Known Issues section below).
 * SSH keypair stored in ``~/.ssh/id_rsa``.
 
 Getting started
